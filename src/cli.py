@@ -17,6 +17,7 @@ from .graph import (
 )
 from .graph_repository import TestRepositoryError, load_test_graph
 from .npm_registry import DependencySourceError, fetch_direct_dependencies
+from .visualization import VisualizationError, render_graph
 
 SUCCESS = 0
 FAILURE = 1
@@ -24,6 +25,7 @@ FAILURE = 1
 
 def main(argv=None):
     """Разбирает параметры и выводит прямые зависимости пакета."""
+    _configure_utf8_streams()
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
@@ -46,7 +48,21 @@ def main(argv=None):
     for package_name, dependencies in graph.items():
         value = ", ".join(dependencies) or "(нет)"
         print(f"{package_name}: {value}")
+    try:
+        dot_path = render_graph(graph, config.output_file)
+    except VisualizationError as exc:
+        print(f"ошибка: {exc}", file=sys.stderr)
+        return FAILURE
+    print(f"DOT сохранён: {dot_path}")
+    print(f"PNG сохранён: {config.output_file}")
     return SUCCESS
+
+
+def _configure_utf8_streams():
+    """Настраивает UTF-8 для вывода кириллицы в Windows-консоль."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
 
 
 def _run_reverse_mode(config):

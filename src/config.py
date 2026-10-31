@@ -11,7 +11,7 @@ TEST_MODE = "test"
 REGISTRY_MODE = "registry"
 TEST_PACKAGE_PATTERN = re.compile(r"[A-Z]+")
 NPM_PACKAGE_PATTERN = re.compile(
-    r"(?:@[a-z0-9._-]+/)?[a-z0-9._-]+"
+    r"(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*"
 )
 VALID_MODES = (REGISTRY_MODE, TEST_MODE)
 

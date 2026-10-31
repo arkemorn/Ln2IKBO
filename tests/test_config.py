@@ -2,12 +2,15 @@
 
 import tempfile
 import unittest
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 
 from src.config import (
     AppConfig,
     ConfigurationError,
     TEST_MODE,
+    build_parser,
     validate_configuration,
 )
 
@@ -38,6 +41,14 @@ class ConfigurationTests(unittest.TestCase):
         config = AppConfig(
             "bad name", "https://registry.npmjs.org", "registry",
             Path("graph.png"),
+        )
+        with self.assertRaisesRegex(ConfigurationError, "имя пакета"):
+            validate_configuration(config)
+
+    def test_rejects_dot_as_registry_package(self):
+        """Не принимает относительный путь за имя npm-пакета."""
+        config = AppConfig(
+            "..", "https://registry.npmjs.org", "registry", Path("g.png")
         )
         with self.assertRaisesRegex(ConfigurationError, "имя пакета"):
             validate_configuration(config)
@@ -93,6 +104,21 @@ class ConfigurationTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ConfigurationError, "полного тестового"):
             validate_configuration(config)
+
+    def test_parser_rejects_unknown_mode(self):
+        """Показывает ошибку, если режим не входит в допустимые значения."""
+        parser = build_parser()
+        arguments = [
+            "--package",
+            "debug",
+            "--repository",
+            "https://registry.npmjs.org",
+            "--mode",
+            "unknown",
+        ]
+        with redirect_stderr(StringIO()):
+            with self.assertRaises(SystemExit):
+                parser.parse_args(arguments)
 
 
 if __name__ == "__main__":

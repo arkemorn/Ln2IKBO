@@ -8,8 +8,11 @@ Python. npm CLI и сторонние библиотеки для получен
 ## Требования
 
 - Python 3.10 или новее.
-- Graphviz `dot` в PATH для создания PNG (этап 5).
+- Graphviz `dot` в PATH для создания PNG ([официальная загрузка](https://graphviz.org/download/)).
 - npm не требуется для работы приложения.
+
+Если Python не доверяет TLS-сертификату npm Registry, укажите доверенный
+PEM bundle через переменную окружения `SSL_CERT_FILE`.
 
 ## Запуск
 
@@ -34,12 +37,15 @@ Linux или macOS:
 - `--repository` — URL npm-реестра или путь к JSON-файлу тестового графа.
 - `--mode` — `registry` для реального npm-реестра или `test` для файла.
 - `--output` — путь к результирующему PNG-файлу.
+- `--reverse` — вывести обратные зависимости в тестовом режиме.
 
 ## Этап 1: конфигурация
 
 Все заданные параметры печатаются при запуске в формате `ключ=значение`.
 Приложение проверяет имя пакета, URL или путь к тестовому файлу, режим и
 путь PNG. Ошибки сопровождаются сообщением и справкой по аргументам.
+Все основные ошибки параметров можно показать командой
+`python -m scripts.demo_errors`.
 
 ## Этап 2: сбор прямых зависимостей
 
@@ -83,3 +89,71 @@ python -m unittest discover -s tests -v
 ./run.sh --mode test --package D --reverse \
   --repository testdata/graphs/multiple.json
 ```
+
+## Этап 5: Graphviz и PNG
+
+Приложение формирует DOT-файл, затем передаёт его установленной программе
+Graphviz `dot` и проверяет сигнатуру результата PNG. DOT сохраняется рядом с
+изображением под тем же именем и расширением `.dot`.
+
+Для трёх демонстрационных пакетов тестового графа запустите:
+
+```sh
+python -m scripts.demo
+```
+
+Сценарий строит изображения для `A`, `B` и `F` в каталоге `output/`.
+Сгенерированные изображения и DOT-файлы исключены из Git; их можно получить
+повторным запуском команды.
+
+### Сравнение с npm
+
+Штатный `npm ls --all` показывает логическое дерево установленного проекта.
+Визуализатор читает поле `dependencies` из metadata версии `latest` каждого
+пакета. Результаты могут различаться из-за lock-файла, диапазонов версий,
+peer-зависимостей и выбора версии npm. Для сравнения создайте временный npm
+проект, установите пакет и выполните `npm ls --all`; затем запустите
+визуализатор для того же имени пакета и сравните рёбра. Само приложение npm
+не запускает и не использует для получения графа.
+
+В контрольном запуске с npm 12.2.1 для `debug@4.4.3` команда `npm ls --all`
+показала `debug@4.4.3 -> ms@2.1.3`. Наш DOT-граф показал `debug -> ms`, а
+`ms` — конечным узлом. Топология совпала; визуализатор не подписывает версии.
+Если npm-проект закрепляет другую версию в lock-файле, добавляет peer-зависимости
+или дедуплицирует разные версии, вывод может различаться.
+
+Официальное описание npm Registry JSON metadata находится в
+[npm Registry API](https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md);
+`npm ls` документирован как вывод logical dependency tree в
+[npm CLI documentation](https://docs.npmjs.com/cli/ls/).
+
+## Функции проекта
+
+| Функция | Назначение |
+| --- | --- |
+| `config.build_parser` | Описывает параметры CLI. |
+| `config.configuration_from_args` | Создаёт и проверяет настройки запуска. |
+| `config.validate_configuration` | Проверяет имя, источник, режим и PNG-путь. |
+| `config._validate_package` | Проверяет формат имени npm-пакета или тестового узла. |
+| `config._validate_repository` | Проверяет URL реестра или путь к JSON. |
+| `config._validate_output` | Проверяет расширение и каталог PNG. |
+| `config.print_configuration` | Печатает параметры как `ключ=значение`. |
+| `cli.main` | Связывает конфигурацию, сбор графа, вывод и визуализацию. |
+| `cli._configure_utf8_streams` | Настраивает консольный вывод UTF-8. |
+| `cli._load_dependency_graph` | Выбирает тестовый или сетевой источник и запускает BFS. |
+| `cli._run_reverse_mode` | Печатает транзитивные обратные зависимости. |
+| `npm_registry.fetch_direct_dependencies` | Читает прямые npm `dependencies` через HTTP. |
+| `npm_registry._build_metadata_request` | Создаёт запрос к npm metadata `latest`. |
+| `npm_registry._fetch_metadata` | Загружает JSON и обрабатывает ошибки HTTP/TLS. |
+| `npm_registry._extract_dependency_names` | Проверяет поле `dependencies`. |
+| `graph.build_dependency_graph` | Строит достижимый граф обходом BFS без рекурсии. |
+| `graph.find_reverse_dependencies` | Ищет входящие зависимости обходом BFS. |
+| `graph.get_test_dependencies` | Возвращает соседей узла из тестового графа. |
+| `graph_repository.load_test_graph` | Загружает и проверяет JSON тестового репозитория. |
+| `graph_repository._validate_name` | Проверяет имя тестового узла и зависимости. |
+| `visualization.graph_to_dot` | Преобразует рёбра в Graphviz DOT. |
+| `visualization.render_graph` | Сохраняет DOT и вызывает `dot` для PNG. |
+| `visualization._quote` | Экранирует имя узла в DOT. |
+| `visualization._validate_png` | Проверяет сигнатуру созданного PNG. |
+| `scripts.demo.main` | Строит три PNG-примера для тестовых пакетов. |
+| `scripts.demo_errors.main` | Показывает ошибки для параметров запуска. |

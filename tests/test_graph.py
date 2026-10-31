@@ -24,6 +24,7 @@ class DependencyGraphTests(unittest.TestCase):
         calls = Counter()
 
         def load(package_name):
+            """Считает обращения и возвращает прямые рёбра узла."""
             calls[package_name] += 1
             return source.get(package_name, ())
 
@@ -40,6 +41,7 @@ class DependencyGraphTests(unittest.TestCase):
     def test_deduplicates_edges(self):
         """Удаляет дубликаты зависимостей, не дублируя обход."""
         def load(package_name):
+            """Возвращает ребро B только из корневого узла A."""
             return ("B", "B") if package_name == "A" else ()
 
         graph = build_dependency_graph("A", load)
