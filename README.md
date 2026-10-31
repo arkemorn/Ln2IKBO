@@ -70,3 +70,16 @@ python -m unittest discover -s tests -v
 ./run.sh --mode test --package A \
   --repository testdata/graphs/multiple.json
 ```
+
+## Этап 4: обратные зависимости
+
+Флаг `--reverse` выполняет BFS по обращённым рёбрам полного тестового графа.
+Для этого режима укажите `--mode test`; пакет должен присутствовать в JSON.
+В npm Registry доступны сведения об исходящих зависимостях пакета, но нет
+полного индекса входящих рёбер. Поэтому реальный режим сообщает об ограничении
+вместо выдачи неполного результата.
+
+```sh
+./run.sh --mode test --package D --reverse \
+  --repository testdata/graphs/multiple.json
+```

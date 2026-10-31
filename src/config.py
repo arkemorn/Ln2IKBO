@@ -28,6 +28,7 @@ class AppConfig:
     repository: str
     mode: str
     output_file: Path
+    reverse: bool = False
 
 
 def build_parser():
@@ -52,6 +53,11 @@ def build_parser():
         default="dependency-graph.png",
         help="путь к PNG-файлу",
     )
+    parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="вывести обратные зависимости тестового пакета",
+    )
     return parser
 
 
@@ -62,6 +68,7 @@ def configuration_from_args(args):
         repository=args.repository,
         mode=args.mode,
         output_file=Path(args.output),
+        reverse=args.reverse,
     )
     validate_configuration(config)
     return config
@@ -72,6 +79,10 @@ def validate_configuration(config):
     _validate_package(config.package_name, config.mode)
     _validate_repository(config.repository, config.mode)
     _validate_output(config.output_file)
+    if config.reverse and config.mode != TEST_MODE:
+        raise ConfigurationError(
+            "обратные зависимости требуют полного тестового графа"
+        )
 
 
 def _validate_package(package_name, mode):
@@ -121,3 +132,4 @@ def print_configuration(config):
     print(f"repository={config.repository}")
     print(f"mode={config.mode}")
     print(f"output={config.output_file}")
+    print(f"reverse={str(config.reverse).lower()}")

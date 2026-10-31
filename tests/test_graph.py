@@ -6,7 +6,7 @@ import unittest
 from collections import Counter
 from pathlib import Path
 
-from src.graph import build_dependency_graph
+from src.graph import build_dependency_graph, find_reverse_dependencies
 from src.graph_repository import TestRepositoryError, load_test_graph
 
 
@@ -44,6 +44,24 @@ class DependencyGraphTests(unittest.TestCase):
 
         graph = build_dependency_graph("A", load)
         self.assertEqual(graph, {"A": ("B",), "B": ()})
+
+    def test_finds_transitive_reverse_dependencies_with_a_cycle(self):
+        """Обходит входящие рёбра и останавливается на цикле."""
+        graph = {
+            "A": ("B", "C"),
+            "B": ("D",),
+            "C": ("D",),
+            "D": ("A",),
+            "E": ("D",),
+        }
+        self.assertEqual(
+            find_reverse_dependencies(graph, "D"),
+            ("A", "B", "C", "E"),
+        )
+
+    def test_returns_no_reverse_dependencies_for_root(self):
+        """Возвращает пустой список для узла без входящих рёбер."""
+        self.assertEqual(find_reverse_dependencies({"A": ()}, "A"), ())
 
 
 class TestRepositoryTests(unittest.TestCase):

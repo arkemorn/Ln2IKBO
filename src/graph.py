@@ -32,3 +32,23 @@ def build_dependency_graph(root_package, dependency_loader):
 def get_test_dependencies(repository_graph, package_name):
     """Возвращает прямые рёбра тестового узла или пустой список."""
     return repository_graph.get(package_name, ())
+
+
+def find_reverse_dependencies(repository_graph, package_name):
+    """Ищет BFS-пакеты, ведущие к выбранному узлу по обратным рёбрам."""
+    reverse_graph = {}
+    for dependent, dependencies in repository_graph.items():
+        for dependency in dependencies:
+            reverse_graph.setdefault(dependency, set()).add(dependent)
+
+    visited = {package_name}
+    pending = deque(reverse_graph.get(package_name, ()))
+    while pending:
+        dependent = pending.popleft()
+        if dependent in visited:
+            continue
+        visited.add(dependent)
+        pending.extend(reverse_graph.get(dependent, ()))
+
+    visited.remove(package_name)
+    return tuple(sorted(visited))

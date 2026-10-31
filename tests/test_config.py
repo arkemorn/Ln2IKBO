@@ -82,6 +82,18 @@ class ConfigurationTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigurationError, "каталог"):
             validate_configuration(config)
 
+    def test_rejects_registry_reverse_mode(self):
+        """Не обещает reverse-зависимости вне полного тестового графа."""
+        config = AppConfig(
+            "left-pad",
+            "https://registry.npmjs.org",
+            "registry",
+            Path("graph.png"),
+            reverse=True,
+        )
+        with self.assertRaisesRegex(ConfigurationError, "полного тестового"):
+            validate_configuration(config)
+
 
 if __name__ == "__main__":
     unittest.main()

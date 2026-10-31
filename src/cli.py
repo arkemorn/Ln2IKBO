@@ -10,7 +10,11 @@ from .config import (
     configuration_from_args,
     print_configuration,
 )
-from .graph import build_dependency_graph, get_test_dependencies
+from .graph import (
+    build_dependency_graph,
+    find_reverse_dependencies,
+    get_test_dependencies,
+)
 from .graph_repository import TestRepositoryError, load_test_graph
 from .npm_registry import DependencySourceError, fetch_direct_dependencies
 
@@ -26,9 +30,9 @@ def main(argv=None):
         config = configuration_from_args(args)
     except ValueError as exc:
         parser.error(str(exc))
-    from .config import print_configuration
-
     print_configuration(config)
+    if config.reverse:
+        return _run_reverse_mode(config)
     try:
         graph = _load_dependency_graph(config)
     except (DependencySourceError, TestRepositoryError) as exc:
@@ -42,6 +46,29 @@ def main(argv=None):
     for package_name, dependencies in graph.items():
         value = ", ".join(dependencies) or "(нет)"
         print(f"{package_name}: {value}")
+    return SUCCESS
+
+
+def _run_reverse_mode(config):
+    """Печатает обратные зависимости из полного тестового графа."""
+    try:
+        repository_graph = load_test_graph(config.repository)
+    except TestRepositoryError as exc:
+        print(f"ошибка: {exc}", file=sys.stderr)
+        return FAILURE
+    if config.package_name not in repository_graph:
+        print(
+            f"ошибка: пакет {config.package_name} отсутствует в тестовом графе",
+            file=sys.stderr,
+        )
+        return FAILURE
+
+    dependencies = find_reverse_dependencies(
+        repository_graph, config.package_name
+    )
+    print(f"Обратные зависимости {config.package_name}:")
+    for dependency in dependencies:
+        print(f"  {dependency}")
     return SUCCESS
 
 
